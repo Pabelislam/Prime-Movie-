@@ -1,0 +1,63 @@
+name: PrimeMovie Android APK Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract Flutter source
+        run: |
+          mkdir -p appsrc
+          unzip -q PrimeMovie-GitHub-Upload.zip -d appsrc
+          test -f appsrc/pubspec.yaml
+          test -f appsrc/lib/main.dart
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.24.5"
+
+      - name: Generate Android project
+        working-directory: appsrc
+        run: bash tool/setup.sh
+
+      - name: Install dependencies
+        working-directory: appsrc
+        run: flutter pub get
+
+      - name: Analyze code
+        working-directory: appsrc
+        run: flutter analyze
+
+      - name: Run tests
+        working-directory: appsrc
+        run: flutter test
+
+      - name: Build APK
+        working-directory: appsrc
+        run: flutter build apk --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: PrimeMovie-Android-APK
+          path: appsrc/build/app/outputs/flutter-apk/app-release.apk
